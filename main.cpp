@@ -9,6 +9,10 @@ void Log(const std::string& message) {
     OutputDebugStringA(message.c_str());
 }
 
+//void Log(const std::wstring& message) {
+//    OutputDebugStringW(message.c_str());
+//}
+
 //std::wstring ConvertString(const std::string& str) {
 //    if (str.empty()) {
 //        return std::wstring();
@@ -119,9 +123,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     Log(ConvertString(std::format(L"WSTRING{}\n", L"ddddd")));
 
     // Log(L"aaaaaaaa");
-    Log(ConvertString(L"bbbbbbb\n"));
+    Log(ConvertString(L"あああああbbbbbbb\n"));
 
     // wstring->string
+    //Log(ConvertString(std::format("WSTRING{}\n", "xxx")));
+    Log((std::format("WSTRING{}\n", "xxx")));
+
+    Log(ConvertString(L"HELLO\n"));
+
     Log(ConvertString(std::format(L"WSTRING{}\n", L"abc")));
 
     return 0;
