@@ -667,10 +667,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
         // 警告時に止まる
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
-        // 解放
-        infoQueue->Release();
 
-        // 本当に直後に入れる
+        // 本当に直前に入れる
         // 抑制するメッセージのID
         D3D12_MESSAGE_ID denyIds[] = {
             // Windows11でのDXGIデバッグレイヤーとDX12デバッグレイヤーの相互作用バグによるエラーメッセージ
@@ -687,6 +685,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         // 指定したメッセージの表示を抑制する
         infoQueue->PushStorageFilter(&filter);
 
+        // 解放
+        infoQueue->Release();
     }
 #endif
 
