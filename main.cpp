@@ -1087,26 +1087,39 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // リソースの先頭のアドレスから使う
     vertexBufferViewSprite.BufferLocation = vertexResourceSprite->GetGPUVirtualAddress();
     // 使用するリソースのサイズは頂点6つ分のサイズ
-    vertexBufferViewSprite.SizeInBytes = sizeof(VertexData) * 6;
+    vertexBufferViewSprite.SizeInBytes = sizeof(VertexData) * 4;
     // 1頂点あたりのサイズ
     vertexBufferViewSprite.StrideInBytes = sizeof(VertexData);
 
     VertexData* vertexDataSprite = nullptr;
     vertexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataSprite));
-    // 1枚目の三角形
-    vertexDataSprite[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };// 左下
+    //// 1枚目の三角形
+    //vertexDataSprite[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };// 左下
+    //vertexDataSprite[0].texcoord = { 0.0f, 1.0f };
+    //vertexDataSprite[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };// 左上
+    //vertexDataSprite[1].texcoord = { 0.0f, 0.0f };
+    //vertexDataSprite[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };// 右下
+    //vertexDataSprite[2].texcoord = { 1.0f, 1.0f };
+    //// 2枚目の三角形
+    //vertexDataSprite[3].position = { 0.0f, 0.0f, 0.0f, 1.0f };// 左上
+    //vertexDataSprite[3].texcoord = { 0.0f, 0.0f };
+    //vertexDataSprite[4].position = { 640.0f, 0.0f, 0.0f, 1.0f };// 右上
+    //vertexDataSprite[4].texcoord = { 1.0f, 0.0f };
+    //vertexDataSprite[5].position = { 640.0f, 360.0f, 0.0f, 1.0f };// 右下
+    //vertexDataSprite[5].texcoord = { 1.0f, 1.0f };
+
+    // 左下
+    vertexDataSprite[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };
     vertexDataSprite[0].texcoord = { 0.0f, 1.0f };
-    vertexDataSprite[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };// 左上
+    // 左上
+    vertexDataSprite[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };
     vertexDataSprite[1].texcoord = { 0.0f, 0.0f };
-    vertexDataSprite[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };// 右下
+    // 右下
+    vertexDataSprite[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };
     vertexDataSprite[2].texcoord = { 1.0f, 1.0f };
-    // 2枚目の三角形
-    vertexDataSprite[3].position = { 0.0f, 0.0f, 0.0f, 1.0f };// 左上
-    vertexDataSprite[3].texcoord = { 0.0f, 0.0f };
-    vertexDataSprite[4].position = { 640.0f, 0.0f, 0.0f, 1.0f };// 右上
-    vertexDataSprite[4].texcoord = { 1.0f, 0.0f };
-    vertexDataSprite[5].position = { 640.0f, 360.0f, 0.0f, 1.0f };// 右下
-    vertexDataSprite[5].texcoord = { 1.0f, 1.0f };
+    // 右上
+    vertexDataSprite[3].position = { 640.0f, 0.0f, 0.0f, 1.0f };
+    vertexDataSprite[3].texcoord = { 1.0f, 0.0f };
 
     // Sprite用のTransformationMatrix用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
     ID3D12Resource* transformationMatrixResourceSprite = CreateBufferResource(device, sizeof(Matrix4x4));
@@ -1251,8 +1264,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);   // VBVを設定
             // TransformationMatrixCBufferの場所を設定
             commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
+            // 頂点インデックス
+            commandList->IASetIndexBuffer(&indexBufferViewSprite);// IBVを設定
             // 描画！（DrawCall/ドローコール）
-            commandList->DrawInstanced(6, 1, 0, 0);
+            // commandList->DrawInstanced(6, 1, 0, 0);
+            // 描画！（DrawCall/ドローコール）6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
+            commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
             // ------------------------------
 
