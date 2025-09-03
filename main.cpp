@@ -60,6 +60,12 @@ struct Transform {
     Vector3 translate;
 };
 
+struct Material {
+    Vector4 color;
+    int32_t enableLighting;
+};
+
+
 // ----------------------------------------
 
 // 単位行列
@@ -1054,14 +1060,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
     // マテリアル用のリソースを作る。今回はcolor1つ分のサイズを用意する
-    ID3D12Resource* materialResource = CreateBufferResource(device, sizeof(Vector4));
+    ID3D12Resource* materialResource = CreateBufferResource(device, sizeof(Material));
     // マテリアルにデータを書き込む
-    Vector4* materialData = nullptr;
+    Material* materialData = nullptr;
     // 書き込むためのアドレスを取得
     materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
-    // 今回は赤を書き込んでみる
-    *materialData = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-
+    // 今回は白を書き込んでみる
+    materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    materialData->enableLighting = true;
 
     // ビューポート
     D3D12_VIEWPORT viewport{};
@@ -1221,8 +1227,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     Transform transformSprite{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
 
-    bool useMonsterBall = true;
+    // -----------------------------------------------------
 
+    // スプライトのマテリアル用のリソースを作る。今回はcolor1つ分のサイズを用意する
+    ID3D12Resource* materialResourceSprite = CreateBufferResource(device, sizeof(Material));
+    // スプライトのマテリアルにデータを書き込む
+    Material* materialDataSprite = nullptr;
+    // 書き込むためのアドレスを取得
+    materialResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&materialDataSprite));
+    // 色は白、ライトは無し
+    materialDataSprite->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    materialDataSprite->enableLighting = false;
+
+
+    // -----------------------------------------------------
+    bool useMonsterBall = true;
     // -----------------------------------------------------
 
     MSG msg{};
@@ -1245,7 +1264,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             //ImGui::ShowDemoWindow();
 
             ImGui::Begin("Settings");
-            ImGui::ColorEdit4("material", &materialData->x, ImGuiColorEditFlags_AlphaPreview);
+            ImGui::ColorEdit4("material", &materialData->color.x, ImGuiColorEditFlags_AlphaPreview);
             //ImGui::DragFloat("rotate.y", &transform.translate.z, 0.1f);
             ImGui::Checkbox("useMonsterBall", &useMonsterBall);
             ImGui::End();
@@ -1339,6 +1358,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             // Spriteの描画。変更が必要なものだけ変更する
             commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);   // VBVを設定
+            // マテリアルCBufferの場所を設定
+            commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
             // TransformationMatrixCBufferの場所を設定
             commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
             // テクスチャー
@@ -1408,6 +1429,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
+    materialResourceSprite->Release();
     vertexResourceSprite->Release();
     transformationMatrixResourceSprite->Release();
 
