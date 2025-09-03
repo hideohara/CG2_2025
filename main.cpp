@@ -65,6 +65,10 @@ struct Material {
     int32_t enableLighting;
 };
 
+struct TransformationMatrix {
+    Matrix4x4 WVP;
+    Matrix4x4 World;
+};
 
 // ----------------------------------------
 
@@ -1088,13 +1092,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     scissorRect.bottom = kClientHeight;
 
     // WVP用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
-    ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4));
+    ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(TransformationMatrix));
     // データを書き込む
-    Matrix4x4* wvpData = nullptr;
+    TransformationMatrix* wvpData = nullptr;
     // 書き込むためのアドレスを取得
     wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
     // 単位行列を書きこんでおく
-    *wvpData = MakeIdentity4x4();
+    wvpData->WVP = MakeIdentity4x4();
+    wvpData->World = MakeIdentity4x4();
+
 
     // Transform変数を作る
     Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
@@ -1217,13 +1223,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     vertexDataSprite[5].normal = { 0.0f, 0.0f, -1.0f };
 
     // Sprite用のTransformationMatrix用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
-    ID3D12Resource* transformationMatrixResourceSprite = CreateBufferResource(device, sizeof(Matrix4x4));
+    ID3D12Resource* transformationMatrixResourceSprite = CreateBufferResource(device, sizeof(TransformationMatrix));
     // データを書き込む
-    Matrix4x4* transformationMatrixDataSprite = nullptr;
+    TransformationMatrix* transformationMatrixDataSprite = nullptr;
     // 書き込むためのアドレスを取得
     transformationMatrixResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixDataSprite));
     // 単位行列を書きこんでおく
-    *transformationMatrixDataSprite = MakeIdentity4x4();
+    transformationMatrixDataSprite->WVP = MakeIdentity4x4();
+    transformationMatrixDataSprite->World = MakeIdentity4x4();
 
     Transform transformSprite{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
 
@@ -1279,15 +1286,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             Matrix4x4 viewMatrix = Inverse(cameraMatrix);
             Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
             Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
-            *wvpData = worldViewProjectionMatrix;
+            wvpData->WVP = worldViewProjectionMatrix;
+            wvpData->World = worldMatrix;
 
             // Sprite用のWorldViewProjectionMatrixを作る
             Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
             Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
             Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth), float(kClientHeight), 0.0f, 100.0f);
             Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
-            *transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
-
+            transformationMatrixDataSprite->WVP = worldViewProjectionMatrixSprite;
+            transformationMatrixDataSprite->World = worldMatrix;
 
             // ImGuiの内部コマンドを生成する
             ImGui::Render();
