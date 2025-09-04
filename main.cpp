@@ -279,6 +279,23 @@ Matrix4x4 Inverse(const Matrix4x4& m) {
     return result;
 }
 
+// 内積
+float Dot(const Vector3& v1, const Vector3& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
+
+// 長さ
+float Length(const Vector3& v) { return std::sqrt(Dot(v, v)); }
+
+// 正規化
+Vector3 Normalize(const Vector3& v) {
+    float length = Length(v);
+    if (length == 0.0f) {
+        return v;
+    }
+    return { v.x / length, v.y / length, v.z / length };
+}
+
+
+
 // -------------------------
 
 
@@ -1298,7 +1315,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             ImGui::ColorEdit4("material", &materialData->color.x, ImGuiColorEditFlags_AlphaPreview);
             //ImGui::DragFloat("rotate.y", &transform.translate.z, 0.1f);
             ImGui::Checkbox("useMonsterBall", &useMonsterBall);
+            ImGui::DragFloat3("light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
             ImGui::End();
+
+            // 方向は正規化
+            directionalLightData->direction = Normalize(directionalLightData->direction);
 
 
             transform.rotate.y += 0.03f;
