@@ -1138,8 +1138,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     */
 
     // モデル読み込み
-    ModelData modelData = LoadObjFile("resources", "fence.obj");
-    // ModelData modelData = LoadObjFile("resources", "plane.obj");
+    //ModelData modelData = LoadObjFile("resources", "fence.obj");
+    ModelData modelData = LoadObjFile("resources", "plane.obj");
     // ModelData modelData = LoadObjFile("resources", "axis.obj");
     // 頂点リソースを作る
     ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
