@@ -1138,7 +1138,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     */
 
     // モデル読み込み
-    ModelData modelData = LoadObjFile("resources", "plane.obj");
+    ModelData modelData = LoadObjFile("resources", "fence.obj");
+    // ModelData modelData = LoadObjFile("resources", "plane.obj");
     // ModelData modelData = LoadObjFile("resources", "axis.obj");
     // 頂点リソースを作る
     ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
@@ -1193,7 +1194,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     // Transform変数を作る
     Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
-    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -5.0f} };
+    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, -15.0f} };
     Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
 
     // --------------------
@@ -1436,16 +1437,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             // -----------------------
 
-            // Spriteの描画。変更が必要なものだけ変更する
-            commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);   // VBVを設定
-            // TransformationMatrixCBufferの場所を設定
-            commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
-            // 頂点インデックス
-            commandList->IASetIndexBuffer(&indexBufferViewSprite);// IBVを設定
-            // 描画！（DrawCall/ドローコール）
-            // commandList->DrawInstanced(6, 1, 0, 0);
-            // 描画！（DrawCall/ドローコール）6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
-            commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+            //// Spriteの描画。変更が必要なものだけ変更する
+            //commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);   // VBVを設定
+            //// TransformationMatrixCBufferの場所を設定
+            //commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
+            //// 頂点インデックス
+            //commandList->IASetIndexBuffer(&indexBufferViewSprite);// IBVを設定
+            //// 描画！（DrawCall/ドローコール）
+            //// commandList->DrawInstanced(6, 1, 0, 0);
+            //// 描画！（DrawCall/ドローコール）6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
+            //commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
             // ------------------------------
 
