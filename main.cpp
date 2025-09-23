@@ -697,18 +697,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
-struct D3DResourceLeakChecker {
-    ~D3DResourceLeakChecker()
-    {
-        // リソースリークチェック
-        Microsoft::WRL::ComPtr<IDXGIDebug1> debug;
-        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-            debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-            debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-            debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-        }
-    }
-};
+//struct D3DResourceLeakChecker {
+//    ~D3DResourceLeakChecker()
+//    {
+//        // リソースリークチェック
+//        Microsoft::WRL::ComPtr<IDXGIDebug1> debug;
+//        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
+//            debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+//            debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
+//            debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
+//        }
+//    }
+//};
 
 
 
@@ -719,7 +719,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     CoInitializeEx(0, COINIT_MULTITHREADED);
 
-    D3DResourceLeakChecker leakCheck;
+    //D3DResourceLeakChecker leakCheck;
 
     WNDCLASS wc{};
     // ウィンドウプロシージャ
@@ -1390,8 +1390,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     
     const uint32_t kNumInstance = 10; // インスタンス数
     // Instancing用のTransformationMatrixリソースを作る
-    Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource =
+    //Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource =
+    //    CreateBufferResource(device, sizeof(TransformationMatrix) * kNumInstance);
+
+    ID3D12Resource* instancingResource =
         CreateBufferResource(device, sizeof(TransformationMatrix) * kNumInstance);
+
     // 書き込むためのアドレスを取得
     TransformationMatrix* instancingData = nullptr;
     instancingResource->Map(0, nullptr, reinterpret_cast<void**>(&instancingData));
@@ -1414,7 +1418,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     instancingSrvDesc.Buffer.StructureByteStride = sizeof(TransformationMatrix);
     D3D12_CPU_DESCRIPTOR_HANDLE instancingSrvHandleCPU = GetCPUDescriptorHandle(srvDescriptorHeap, desriptorSizeSRV, 3);
     D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU = GetGPUDescriptorHandle(srvDescriptorHeap, desriptorSizeSRV, 3);
-    device->CreateShaderResourceView(instancingResource.Get(), &instancingSrvDesc, instancingSrvHandleCPU);
+    //device->CreateShaderResourceView(instancingResource.Get(), &instancingSrvDesc, instancingSrvHandleCPU);
+    device->CreateShaderResourceView(instancingResource, &instancingSrvDesc, instancingSrvHandleCPU);
 
     Transform transforms[kNumInstance];
     for (uint32_t index = 0; index < kNumInstance; ++index) {
@@ -1422,8 +1427,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         transforms[index].rotate = { 0.0f, 0.0f, 0.0f };
         transforms[index].translate = { index * 0.1f, index * 0.1f, index * 0.1f };
     }
-
-
 
     // -----------------------------------------------------
 
@@ -1668,13 +1671,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     CloseWindow(hwnd);
 
     // リソースリークチェック
-    //IDXGIDebug1* debug;
-    //if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-    //    debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-    //    debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-    //    debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-    //    debug->Release();
-    //}
+    IDXGIDebug1* debug;
+    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
+        debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+        debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
+        debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
+        debug->Release();
+    }
 
     CoUninitialize();
 
