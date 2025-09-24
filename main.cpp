@@ -1061,6 +1061,39 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // すべての色要素を書き込む
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+
+    // 通常
+    blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+
+    // 加算合成（AddBlend）
+    //blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    //blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    //blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+
+    // 減算合成（逆減算合成）（SubtractBlend）
+    //blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    //blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_REV_SUBTRACT;
+    //blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+
+    // 乗算合成（MultiplyBlend）
+    //blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_ZERO;
+    //blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    //blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_SRC_COLOR;
+
+    // スクリーン合成（ScreenBlend）
+    //blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_INV_DEST_COLOR;
+    //blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    //blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+
+
+    // 共通
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+
     // RasiterzerStateの設定
     D3D12_RASTERIZER_DESC rasterizerDesc{};
     // 裏面（時計回り）を表示しない
@@ -1453,6 +1486,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             ImGui::Begin("Settings");
             ImGui::ColorEdit4("material", &materialData->color.x, ImGuiColorEditFlags_AlphaPreview);
             ImGui::DragFloat("rotate.y", &transform.rotate.y, 0.1f);
+            ImGui::DragFloat("intensity", &directionalLightData->intensity, 0.1f);
             ImGui::Checkbox("useMonsterBall", &useMonsterBall);
             ImGui::DragFloat3("light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
             ImGui::End();
