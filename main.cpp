@@ -1218,37 +1218,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // リソースの先頭のアドレスから使う
     vertexBufferViewSprite.BufferLocation = vertexResourceSprite->GetGPUVirtualAddress();
     // 使用するリソースのサイズは頂点6つ分のサイズ
-    vertexBufferViewSprite.SizeInBytes = sizeof(VertexData) * 6;
+    // vertexBufferViewSprite.SizeInBytes = sizeof(VertexData) * 6;
+    vertexBufferViewSprite.SizeInBytes = sizeof(VertexData) * 4;
     // 1頂点あたりのサイズ
     vertexBufferViewSprite.StrideInBytes = sizeof(VertexData);
 
     VertexData* vertexDataSprite = nullptr;
     vertexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataSprite));
-    // 1枚目の三角形
-    vertexDataSprite[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };// 左下
+    // 左下
+    vertexDataSprite[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };
     vertexDataSprite[0].texcoord = { 0.0f, 1.0f };
-    vertexDataSprite[0].normal = { 0.0f, 0.0f, -1.0f };
-
-    vertexDataSprite[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };// 左上
+    // 左上
+    vertexDataSprite[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };
     vertexDataSprite[1].texcoord = { 0.0f, 0.0f };
-    vertexDataSprite[1].normal = { 0.0f, 0.0f, -1.0f };
-
-    vertexDataSprite[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };// 右下
+    // 右下
+    vertexDataSprite[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };
     vertexDataSprite[2].texcoord = { 1.0f, 1.0f };
-    vertexDataSprite[2].normal = { 0.0f, 0.0f, -1.0f };
-
-    // 2枚目の三角形
-    vertexDataSprite[3].position = { 0.0f, 0.0f, 0.0f, 1.0f };// 左上
-    vertexDataSprite[3].texcoord = { 0.0f, 0.0f };
-    vertexDataSprite[3].normal = { 0.0f, 0.0f, -1.0f };
-
-    vertexDataSprite[4].position = { 640.0f, 0.0f, 0.0f, 1.0f };// 右上
-    vertexDataSprite[4].texcoord = { 1.0f, 0.0f };
-    vertexDataSprite[4].normal = { 0.0f, 0.0f, -1.0f };
-
-    vertexDataSprite[5].position = { 640.0f, 360.0f, 0.0f, 1.0f };// 右下
-    vertexDataSprite[5].texcoord = { 1.0f, 1.0f };
-    vertexDataSprite[5].normal = { 0.0f, 0.0f, -1.0f };
+    // 右上
+    vertexDataSprite[3].position = { 640.0f, 0.0f, 0.0f, 1.0f };
+    vertexDataSprite[3].texcoord = { 1.0f, 0.0f };
 
     // Sprite用のTransformationMatrix用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
     ID3D12Resource* transformationMatrixResourceSprite = CreateBufferResource(device, sizeof(TransformationMatrix));
@@ -1286,10 +1274,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     directionalLightData->direction = { 0.0f, -1.0f, 0.0f };
     directionalLightData->intensity = 1.0f;
 
-
-
     // -----------------------------------------------------
     bool useMonsterBall = true;
+
+    // -----------------------------------------------------
+
+    // 頂点インデックス
+
+    ID3D12Resource* indexResourceSprite = CreateBufferResource(device, sizeof(uint32_t) * 6);
+
+    D3D12_INDEX_BUFFER_VIEW indexBufferViewSprite{};
+    // リソースの先頭のアドレスから使う
+    indexBufferViewSprite.BufferLocation = indexResourceSprite->GetGPUVirtualAddress();
+    // 使用するリソースのサイズはインデックス6つ分のサイズ
+    indexBufferViewSprite.SizeInBytes = sizeof(uint32_t) * 6;
+    // インデックスはuint32_tとする
+    indexBufferViewSprite.Format = DXGI_FORMAT_R32_UINT;
+
+    // インデックスリソースにデータを書き込む
+    uint32_t* indexDataSprite = nullptr;
+    indexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&indexDataSprite));
+    indexDataSprite[0] = 0;	indexDataSprite[1] = 1;	indexDataSprite[2] = 2;
+    indexDataSprite[3] = 1;	indexDataSprite[4] = 3;	indexDataSprite[5] = 2;
+
     // -----------------------------------------------------
 
     MSG msg{};
@@ -1419,8 +1426,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
             // テクスチャー
             commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
+            // 頂点インデックス
+            commandList->IASetIndexBuffer(&indexBufferViewSprite);// IBVを設定
             // 描画！（DrawCall/ドローコール）
-            commandList->DrawInstanced(6, 1, 0, 0);
+            //commandList->DrawInstanced(6, 1, 0, 0);
+            // 描画！（DrawCall/ドローコール）6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
+            commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
 
             // ------------------------------
 
@@ -1478,11 +1490,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     Log(ConvertString(std::format(L"WSTRING{}\n", L"abc")));
 
+    CloseHandle(fenceEvent);
+
     // ImGuiの終了処理。
     // 初期化と逆順に行う
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
+    indexResourceSprite->Release();
 
     directionalLightResource->Release();
     materialResourceSprite->Release();
@@ -1509,7 +1525,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 
-    CloseHandle(fenceEvent);
+
     fence->Release();
     srvDescriptorHeap->Release();
     rtvDescriptorHeap->Release();
