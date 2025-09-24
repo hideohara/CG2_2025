@@ -759,7 +759,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // ウィンドウの生成
     HWND hwnd = CreateWindow(
         wc.lpszClassName,       // 利用するクラス名
-        L"CG2",                 // タイトルバーの文字（何でも良い）
+        L"CG3_Light",                 // タイトルバーの文字（何でも良い）
         WS_OVERLAPPEDWINDOW,    // よく見るウィンドウスタイル
         CW_USEDEFAULT,          // 表示X座標（Windowsに任せる）
         CW_USEDEFAULT,          // 表示Y座標（WindowsOSに任せる）
@@ -1261,7 +1261,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     // Transform変数を作る
     Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
-    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -5.0f} };
+    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, -15.0f} };
     Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
 
     // --------------------
@@ -1407,7 +1407,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     directionalLightData->intensity = 1.0f;
 
     // -----------------------------------------------------
-    bool useMonsterBall = true;
+    bool useMonsterBall = false;
 
     // -----------------------------------------------------
 
@@ -1452,7 +1452,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             ImGui::Begin("Settings");
             ImGui::ColorEdit4("material", &materialData->color.x, ImGuiColorEditFlags_AlphaPreview);
-            //ImGui::DragFloat("rotate.y", &transform.translate.z, 0.1f);
+            ImGui::DragFloat("rotate.y", &transform.rotate.y, 0.1f);
             ImGui::Checkbox("useMonsterBall", &useMonsterBall);
             ImGui::DragFloat3("light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
             ImGui::End();
@@ -1461,7 +1461,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             directionalLightData->direction = Normalize(directionalLightData->direction);
 
 
-            transform.rotate.y += 0.03f;
+           //transform.rotate.y += 0.03f;
            // Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
            // *wvpData = worldMatrix;
 
@@ -1551,20 +1551,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             // -----------------------
 
-            // Spriteの描画。変更が必要なものだけ変更する
-            commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);   // VBVを設定
-            // マテリアルCBufferの場所を設定
-            commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
-            // TransformationMatrixCBufferの場所を設定
-            commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
-            // テクスチャー
-            commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
-            // 頂点インデックス
-            commandList->IASetIndexBuffer(&indexBufferViewSprite);// IBVを設定
-            // 描画！（DrawCall/ドローコール）
-            //commandList->DrawInstanced(6, 1, 0, 0);
-            // 描画！（DrawCall/ドローコール）6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
-            commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+            //// Spriteの描画。変更が必要なものだけ変更する
+            //commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);   // VBVを設定
+            //// マテリアルCBufferの場所を設定
+            //commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
+            //// TransformationMatrixCBufferの場所を設定
+            //commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
+            //// テクスチャー
+            //commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
+            //// 頂点インデックス
+            //commandList->IASetIndexBuffer(&indexBufferViewSprite);// IBVを設定
+            //// 描画！（DrawCall/ドローコール）
+            ////commandList->DrawInstanced(6, 1, 0, 0);
+            //// 描画！（DrawCall/ドローコール）6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
+            //commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 
             // ------------------------------
