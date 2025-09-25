@@ -27,6 +27,8 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 #include <fstream>
 #include <sstream>
 
+#include "externals/DirectXTex/d3dx12.h"
+
 struct Vector4 {
     float x;
     float y;
@@ -986,15 +988,27 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; // SRVを使う
     descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
+    // インスタンシング
+    D3D12_DESCRIPTOR_RANGE descriptorRangeForInstancing[1] = {};
+    descriptorRangeForInstancing[0].BaseShaderRegister = 0;  // 0から始まる
+    descriptorRangeForInstancing[0].NumDescriptors = 1;  // 数は1つ
+    descriptorRangeForInstancing[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; // SRVを使う
+    descriptorRangeForInstancing[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     // RootParameter作成。複数設定できるので配列。今回は結果1つだけなので長さ1の配列
     D3D12_ROOT_PARAMETER rootParameters[4] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShaderで使う
     rootParameters[0].Descriptor.ShaderRegister = 0;    // レジスタ番号0とバインド
 
-    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+    //rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+    //rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;   // VertexShaderで使う
+    //rootParameters[1].Descriptor.ShaderRegister = 0;    // レジスタ番号0を使う
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;    // DescriptorTableを使う
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;   // VertexShaderで使う
-    rootParameters[1].Descriptor.ShaderRegister = 0;    // レジスタ番号0を使う
+    rootParameters[1].DescriptorTable.pDescriptorRanges = descriptorRangeForInstancing;  // Tableの中身の配列を指定
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing); // Tableで利用する数
 
     rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // DescriptorTableを使う
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使う
@@ -1097,16 +1111,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // RasiterzerStateの設定
     D3D12_RASTERIZER_DESC rasterizerDesc{};
     // 裏面（時計回り）を表示しない
-    rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
-    //rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+    //rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+    rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
     // Shaderをコンパイルする
-    IDxcBlob* vertexShaderBlob = CompileShader(L"Object3D.VS.hlsl", L"vs_6_0", dxcUtils, dxcCompiler, includeHandler);
+    IDxcBlob* vertexShaderBlob = CompileShader(L"Particle.VS.hlsl", L"vs_6_0", dxcUtils, dxcCompiler, includeHandler);
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob* pixelShaderBlob = CompileShader(L"Object3D.PS.hlsl", L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
+    IDxcBlob* pixelShaderBlob = CompileShader(L"Particle.PS.hlsl", L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
     assert(pixelShaderBlob != nullptr);
 
     // PSOを生成する
@@ -1464,6 +1478,48 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     indexDataSprite[3] = 1;	indexDataSprite[4] = 3;	indexDataSprite[5] = 2;
 
     // -----------------------------------------------------
+    // インスタンシング
+
+    const uint32_t kNumInstance = 10; // インスタンス数
+    // Instancing用のTransformationMatrixリソースを作る
+    //Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource =
+    //    CreateBufferResource(device, sizeof(TransformationMatrix) * kNumInstance);
+    ID3D12Resource* instancingResource =
+        CreateBufferResource(device, sizeof(TransformationMatrix) * kNumInstance);
+
+    // 書き込むためのアドレスを取得
+    TransformationMatrix* instancingData = nullptr;
+    instancingResource->Map(0, nullptr, reinterpret_cast<void**>(&instancingData));
+    // 単位行列を書きこんでおく
+    for (uint32_t index = 0; index < kNumInstance; ++index) {
+        instancingData[index].WVP = MakeIdentity4x4();
+        instancingData[index].World = MakeIdentity4x4();
+    }
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
+    instancingSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    instancingSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    instancingSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    instancingSrvDesc.Buffer.FirstElement = 0;
+    instancingSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+    instancingSrvDesc.Buffer.NumElements = kNumInstance;
+    instancingSrvDesc.Buffer.StructureByteStride = sizeof(TransformationMatrix);
+    D3D12_CPU_DESCRIPTOR_HANDLE instancingSrvHandleCPU = GetCPUDescriptorHandle(srvDescriptorHeap, desriptorSizeSRV, 3);
+    D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU = GetGPUDescriptorHandle(srvDescriptorHeap, desriptorSizeSRV, 3);
+    //device->CreateShaderResourceView(instancingResource.Get(), &instancingSrvDesc, instancingSrvHandleCPU);
+    device->CreateShaderResourceView(instancingResource, &instancingSrvDesc, instancingSrvHandleCPU);
+
+    Transform transforms[kNumInstance];
+    for (uint32_t index = 0; index < kNumInstance; ++index) {
+        transforms[index].scale = { 1.0f, 1.0f, 1.0f };
+        transforms[index].rotate = { 0.0f, 0.0f, 0.0f };
+        transforms[index].translate = { index * 0.1f, index * 0.1f, index * 0.1f };
+    }
+
+
+
+    // -----------------------------------------------------
+
 
     MSG msg{};
     // ウィンドウの×ボタンが押されるまでループ
@@ -1515,6 +1571,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
             transformationMatrixDataSprite->WVP = worldViewProjectionMatrixSprite;
             transformationMatrixDataSprite->World = worldMatrix;
+
+            // インスタンシング
+            Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
+            for (uint32_t index = 0; index < kNumInstance; ++index) {
+                Matrix4x4 worldMatrix =
+                    MakeAffineMatrix(transforms[index].scale, transforms[index].rotate, transforms[index].translate);
+                Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
+                instancingData[index].WVP = worldViewProjectionMatrix;
+                instancingData[index].World = worldMatrix;
+            }
+
 
             // ImGuiの内部コマンドを生成する
             ImGui::Render();
@@ -1571,7 +1638,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             // マテリアルCBufferの場所を設定
             commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
             // wvp用のCBufferの場所を設定
-            commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+            //commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+            // instancing用のDataを読むためにStructuredBufferのSRVを設定する
+            commandList->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU);
             // SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
             //commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
             //commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU2);
@@ -1582,7 +1651,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             // 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
             //commandList->DrawInstanced(6, 1, 0, 0);
             //commandList->DrawInstanced(kNumSphereVertices, 1, 0, 0);
-            commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+            commandList->DrawInstanced(UINT(modelData.vertices.size()), kNumInstance, 0, 0);
 
             // -----------------------
 
@@ -1666,6 +1735,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
+
+    instancingResource->Release();
     indexResourceSprite->Release();
 
     directionalLightResource->Release();
