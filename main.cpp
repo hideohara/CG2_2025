@@ -1180,7 +1180,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // Depthの機能を有効化する
     depthStencilDesc.DepthEnable = true;
     // 書き込みします
-    depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    //depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO; // Depthの書き込みを行わない
     // 比較関数はLessEqual。つまり、近ければ描画される
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
@@ -1330,7 +1331,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // テクスチャ
     // Textureを読んで転送する
     //DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
-    DirectX::ScratchImage mipImages = LoadTexture(modelData.material.textureFilePath);
+    //DirectX::ScratchImage mipImages = LoadTexture(modelData.material.textureFilePath);
+    DirectX::ScratchImage mipImages = LoadTexture("resources/circle.png");
 
     const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
     ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
