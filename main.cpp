@@ -93,6 +93,23 @@ struct Emitter {
     float frequencyTime; //!< 頻度用時刻
 };
 
+// AABB
+struct AABB {
+    Vector3 min;
+    Vector3 max;
+};
+
+struct AccelerationField {
+    Vector3 acceleration;   //!< 加速度
+    AABB area;  //!< 範囲
+};
+
+bool IsCollision(const AABB& aabb, const Vector3& point) {
+    return (aabb.min.x <= point.x && aabb.max.x >= point.x) &&
+        (aabb.min.y <= point.y && aabb.max.y >= point.y) &&
+        (aabb.min.z <= point.z && aabb.max.z >= point.z);
+}
+
 // ----------------------------------------
 
 // 単位行列
@@ -1589,6 +1606,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     bool useUpdate = true;
     bool useBillboard = false;
 
+    // 加速
+    AccelerationField accelerationField;
+    accelerationField.acceleration = { 15.0f, 0.0f, 0.0f };
+    accelerationField.area.min = { -1.0f, -1.0f, -1.0f };
+    accelerationField.area.max = { 1.0f, 1.0f, 1.0f };
+
+
     // -----------------------------------------------------
 
     MSG msg{};
@@ -1698,6 +1722,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
                 if (useUpdate == true) {
+                    // Fieldの範囲内のParticleには加速度を適用する
+                    if (IsCollision(accelerationField.area, (*particleIterator).transform.translate)) {
+                        (*particleIterator).velocity += accelerationField.acceleration * kDeltaTime;
+                    }
+                    // 速度を適用。すでにあるコード
+                    (*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
+
+
                     (*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
                     (*particleIterator).currentTime += kDeltaTime;// 経過時間を足す
                 }
