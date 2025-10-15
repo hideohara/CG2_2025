@@ -1649,12 +1649,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             *transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
 
             // 発生
-            emitter.frequencyTime += kDeltaTime;// 時刻を進める
-            if (emitter.frequency <= emitter.frequencyTime) {// 頻度より大きいなら発生
-                particles.splice(particles.end(), Emit(emitter, randomEngine));// 発生処理
-                emitter.frequencyTime -= emitter.frequency;// 余計に過ぎた時間も加味して頻度計算する
+            if (useUpdate) {
+                emitter.frequencyTime += kDeltaTime;// 時刻を進める
+                if (emitter.frequency <= emitter.frequencyTime) {// 頻度より大きいなら発生
+                    particles.splice(particles.end(), Emit(emitter, randomEngine));// 発生処理
+                    emitter.frequencyTime -= emitter.frequency;// 余計に過ぎた時間も加味して頻度計算する
+                }
             }
-
 
 
             // インスタンシング
