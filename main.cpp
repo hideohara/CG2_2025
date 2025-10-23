@@ -1655,6 +1655,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             // -----------------------
 
+
             //// Spriteの描画。変更が必要なものだけ変更する
             //commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);   // VBVを設定
             //// マテリアルCBufferの場所を設定
