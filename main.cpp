@@ -1647,8 +1647,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             // 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
             // commandList->DrawInstanced(6, 1, 0, 0);
-            commandList->DrawInstanced(UINT(modelData.vertices.size()), numInstance, 0, 0);
-
+            if (numInstance > 0)
+            {
+                commandList->DrawInstanced(UINT(modelData.vertices.size()), numInstance, 0, 0);
+            }
             // -----------------------
 
             //// Spriteの描画。変更が必要なものだけ変更する
