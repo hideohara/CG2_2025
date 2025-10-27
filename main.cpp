@@ -1514,7 +1514,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // Δtを定義。とりあえず60fps固定してあるが、実時間を計測して可変fpsで動かせるようにしておくとなお良い
     const float kDeltaTime = 1.0f / 60.0f;
 
+
+    bool useBillboard = false;
+    bool useUpdate = false;
+
     // -----------------------------------------------------
+
 
     MSG msg{};
     // ウィンドウの×ボタンが押されるまでループ
@@ -1540,6 +1545,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             ImGui::DragFloat("rotate.y", &transform.rotate.y, 0.1f);
             ImGui::DragFloat3("transform", &transform.translate.x, 0.1f);
             ImGui::DragFloat2("Sprite transform", &transformSprite.translate.x, 1.0f);
+            ImGui::Checkbox("Update", &useUpdate);
+            ImGui::Checkbox("Billboard", &useBillboard);
             ImGui::End();
 
             //transform.rotate.y += 0.03f;
@@ -1571,8 +1578,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
                     MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
                 Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
 
-                particles[index].transform.translate += particles[index].velocity * kDeltaTime;
-                particles[index].currentTime += kDeltaTime;// 経過時間を足す
+                if (useUpdate == true)
+                {
+                    particles[index].transform.translate += particles[index].velocity * kDeltaTime;
+                    particles[index].currentTime += kDeltaTime;// 経過時間を足す
+                }
 
                 instancingData[numInstance].WVP = worldViewProjectionMatrix;
                 instancingData[numInstance].World = worldMatrix;
