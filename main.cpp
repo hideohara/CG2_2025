@@ -63,6 +63,7 @@ struct Transform {
 struct Material {
     Vector4 color;
     int32_t enableLighting;
+    float shininess;
 };
 
 struct TransformationMatrix {
@@ -1104,10 +1105,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     Material* materialData = nullptr;
     // 書き込むためのアドレスを取得
     materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
-    // 今回は赤を書き込んでみる
+    // 今回は白を書き込んでみる
     materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialData->enableLighting = true;
-
+    materialData->shininess = 70.0f;
 
     // スプライトのマテリアル用のリソースを作る。今回はcolor1つ分のサイズを用意する
     ID3D12Resource* materialResourceSprite = CreateBufferResource(device, sizeof(Material));
