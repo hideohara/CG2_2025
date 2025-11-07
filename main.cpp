@@ -1319,7 +1319,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     // Transform変数を作る
     Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
-    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, -20.0f} };
+    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.2f, 0.0f, 0.0f}, {0.0f, 5.0f, -20.0f} };
     Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
 
     // --------------------
@@ -1347,7 +1347,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // 今回は白を書き込んでみる
     modelMaterialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     modelMaterialData->enableLighting = true;
-    modelMaterialData->shininess = 777.0f;
+    modelMaterialData->shininess = 7777.0f;
 
     // --------------------
 
@@ -1491,7 +1491,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // 書き込むためのアドレスを取得
     cameraResource->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
 
-    cameraData->worldPosition = { 0.0f, 1.0f, -20.0f };
+    //cameraData->worldPosition = { 0.0f, 1.0f, -20.0f };
+    cameraData->worldPosition = cameraTransform.translate;
+
 
     // -----------------------------------------------------
 
@@ -1628,7 +1630,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             // cameraのCBufferの場所を設定
             commandList->SetGraphicsRootConstantBufferView(4, cameraResource->GetGPUVirtualAddress());
 
-
             // 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
             //commandList->DrawInstanced(6, 1, 0, 0);
             commandList->DrawInstanced(kNumSphereVertices, 1, 0, 0);
@@ -1656,7 +1657,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             // マテリアルCBufferの場所を設定
             commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
             // 描画！（DrawCall/ドローコール）
-            commandList->DrawInstanced(6, 1, 0, 0);
+            //commandList->DrawInstanced(6, 1, 0, 0);
 
             // ------------------------------
 
