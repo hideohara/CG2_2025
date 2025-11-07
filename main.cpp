@@ -1160,7 +1160,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     // -----------------------------------------------------------
     // 球表示用
-    /*
+    
     const uint32_t kSubdivision = 12;
     const uint32_t kNumSphereVertices = kSubdivision * kSubdivision * 6;
     float pi = std::numbers::pi_v<float>;
@@ -1238,24 +1238,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
         }
     }
-    */
+    
     // -------------------------------------------------------
-
+    
     // モデル読み込み
-    ModelData modelData = LoadObjFile("resources", "plane.obj");
+    //ModelData modelData = LoadObjFile("resources", "plane.obj");
     //ModelData modelData = LoadObjFile("resources", "axis.obj");
+    ModelData modelData = LoadObjFile("./resources", "terrain.obj");
+
     // 頂点リソースを作る
-    ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
+    ID3D12Resource* modelVertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
     // 頂点バッファビューを作成する
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
-    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();// リソースの先頭のアドレスから使う
-    vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());// 使用するリソースのサイズは頂点のサイズ
-    vertexBufferView.StrideInBytes = sizeof(VertexData);// 1頂点あたりのサイズ
+    D3D12_VERTEX_BUFFER_VIEW modelVertexBufferView{};
+    modelVertexBufferView.BufferLocation = modelVertexResource->GetGPUVirtualAddress();// リソースの先頭のアドレスから使う
+    modelVertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());// 使用するリソースのサイズは頂点のサイズ
+    modelVertexBufferView.StrideInBytes = sizeof(VertexData);// 1頂点あたりのサイズ
 
     // 頂点リソースにデータを書き込む
-    VertexData* vertexData = nullptr;
-    vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData)); // 書き込むためのアドレスを取得
-    std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());// 頂点データをリソースにコピー
+    VertexData* modelVertexData = nullptr;
+    modelVertexResource->Map(0, nullptr, reinterpret_cast<void**>(&modelVertexData)); // 書き込むためのアドレスを取得
+    std::memcpy(modelVertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());// 頂点データをリソースにコピー
 
 
     // --------------------------------------------------
@@ -1282,6 +1284,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // 色は白、ライトは無し
     materialDataSprite->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialDataSprite->enableLighting = false;
+
+
+
 
     // ビューポート
     D3D12_VIEWPORT viewport{};
@@ -1314,8 +1319,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     // Transform変数を作る
     Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
-    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, -10.0f} };
+    Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, -20.0f} };
     Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+
+    // --------------------
+
+    // WVP用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
+    ID3D12Resource* modelWvpResource = CreateBufferResource(device, sizeof(TransformationMatrix));
+    // データを書き込む
+    TransformationMatrix* modelWvpData = nullptr;
+    // 書き込むためのアドレスを取得
+    modelWvpResource->Map(0, nullptr, reinterpret_cast<void**>(&modelWvpData));
+    // 単位行列を書きこんでおく
+    modelWvpData->WVP = MakeIdentity4x4();
+    modelWvpData->World = MakeIdentity4x4();
+    modelWvpData->WorldInverseTranspose = MakeIdentity4x4();
+
+    Transform modelTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
+
+
+    // マテリアル用のリソースを作る。今回はcolor1つ分のサイズを用意する
+    ID3D12Resource* modelMaterialResource = CreateBufferResource(device, sizeof(Material));
+    // マテリアルにデータを書き込む
+    Material* modelMaterialData = nullptr;
+    // 書き込むためのアドレスを取得
+    modelMaterialResource->Map(0, nullptr, reinterpret_cast<void**>(&modelMaterialData));
+    // 今回は白を書き込んでみる
+    modelMaterialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    modelMaterialData->enableLighting = true;
+    modelMaterialData->shininess = 777.0f;
 
     // --------------------
 
@@ -1334,7 +1366,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // --------------------------------------------
     // テクスチャ
     // Textureを読んで転送する
-    DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
+    //DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
+    DirectX::ScratchImage mipImages = LoadTexture(modelData.material.textureFilePath);
     const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
     ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
     UploadTextureData(textureResource, mipImages);
@@ -1458,8 +1491,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // 書き込むためのアドレスを取得
     cameraResource->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
 
-    cameraData->worldPosition = { 0.0f, 1.0f, -10.0f };
+    cameraData->worldPosition = { 0.0f, 1.0f, -20.0f };
+
     // -----------------------------------------------------
+
 
     MSG msg{};
     // ウィンドウの×ボタンが押されるまでループ
@@ -1482,7 +1517,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             ImGui::Begin("Settings");
             ImGui::ColorEdit4("material", &materialData->color.x, ImGuiColorEditFlags_AlphaPreview);
-            //ImGui::DragFloat("rotate.y", &transform.translate.z, 0.1f);
+            ImGui::DragFloat("rotate.y", &modelTransform.rotate.y, 0.1f);
             ImGui::Checkbox("useMonsterBall", &useMonsterBall);
             ImGui::DragFloat3("light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
             ImGui::DragFloat3("scale", &transform.scale.x,  0.01f, 0.1f, 5.0f);
@@ -1492,7 +1527,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             directionalLightData->direction = Normalize(directionalLightData->direction);
 
 
-            transform.rotate.y += 0.03f;
+            //transform.rotate.y += 0.03f;
            // Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
            // *wvpData = worldMatrix;
 
@@ -1504,6 +1539,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             wvpData->WVP = worldViewProjectionMatrix;
             wvpData->World = worldMatrix;
             wvpData->WorldInverseTranspose = Transpose(Inverse(worldMatrix));
+
+
+            // モデル用
+            //modelTransform.rotate.y += 0.03f;
+            Matrix4x4 modelWorldMatrix = MakeAffineMatrix(modelTransform.scale, modelTransform.rotate, modelTransform.translate);
+            //Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
+            //Matrix4x4 viewMatrix = Inverse(cameraMatrix);
+            //Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+            Matrix4x4 modelWorldViewProjectionMatrix = Multiply(modelWorldMatrix, Multiply(viewMatrix, projectionMatrix));
+            modelWvpData->WVP = modelWorldViewProjectionMatrix;
+            modelWvpData->World = modelWorldMatrix;
+            modelWvpData->WorldInverseTranspose = Transpose(Inverse(modelWorldMatrix));
+
 
             // Sprite用のWorldViewProjectionMatrixを作る
             Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
@@ -1562,6 +1610,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             // RootSignatureを設定。PSOに設定しているけど別途設定が必要
             commandList->SetGraphicsRootSignature(rootSignature);
             commandList->SetPipelineState(graphicsPipelineState);   // PSOを設定
+
             commandList->IASetVertexBuffers(0, 1, &vertexBufferView);   // VBVを設定
             // 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
             commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -1582,7 +1631,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             // 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
             //commandList->DrawInstanced(6, 1, 0, 0);
-            //commandList->DrawInstanced(kNumSphereVertices, 1, 0, 0);
+            commandList->DrawInstanced(kNumSphereVertices, 1, 0, 0);
+
+
+            // -----------------------------------------------
+
+            // マテリアルCBufferの場所を設定
+            commandList->IASetVertexBuffers(0, 1, &modelVertexBufferView);   // VBVを設定
+            // wvp用のCBufferの場所を設定
+            commandList->SetGraphicsRootConstantBufferView(1, modelWvpResource->GetGPUVirtualAddress());
+            commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
+            // マテリアルCBufferの場所を設定
+            commandList->SetGraphicsRootConstantBufferView(0, modelMaterialResource->GetGPUVirtualAddress());
             commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 
             // -----------------------
@@ -1673,9 +1733,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     textureResource2->Release();
     textureResource->Release();
     wvpResource->Release();
+    modelWvpResource->Release();
     materialResource->Release();
     materialResourceSprite->Release();
+    modelMaterialResource->Release();
 
+    modelVertexResource->Release();
     vertexResource->Release();
     graphicsPipelineState->Release();
     signatureBlob->Release();
