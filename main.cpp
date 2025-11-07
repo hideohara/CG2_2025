@@ -53,6 +53,9 @@ struct Matrix4x4 {
     float m[4][4];
 };
 
+//struct Matrix3x3 {
+//    float m[3][3];
+//};
 
 struct Transform {
     Vector3 scale;
@@ -69,6 +72,7 @@ struct Material {
 struct TransformationMatrix {
     Matrix4x4 WVP;
     Matrix4x4 World;
+    Matrix4x4 WorldInverseTranspose;
 };
 
 // 光源
@@ -297,6 +301,31 @@ Vector3 Normalize(const Vector3& v) {
     return { v.x / length, v.y / length, v.z / length };
 }
 
+
+Matrix4x4 Transpose(const Matrix4x4& m) {
+    Matrix4x4 result;
+    result.m[0][0] = m.m[0][0];
+    result.m[0][1] = m.m[1][0];
+    result.m[0][2] = m.m[2][0];
+    result.m[0][3] = m.m[3][0];
+
+    result.m[1][0] = m.m[0][1];
+    result.m[1][1] = m.m[1][1];
+    result.m[1][2] = m.m[2][1];
+    result.m[1][3] = m.m[3][1];
+
+    result.m[2][0] = m.m[0][2];
+    result.m[2][1] = m.m[1][2];
+    result.m[2][2] = m.m[2][2];
+    result.m[2][3] = m.m[3][2];
+
+    result.m[3][0] = m.m[0][3];
+    result.m[3][1] = m.m[1][3];
+    result.m[3][2] = m.m[2][3];
+    result.m[3][3] = m.m[3][3];
+
+    return result;
+}
 
 // -------------------------
 
@@ -1147,6 +1176,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // 単位行列を書きこんでおく
     wvpData->WVP = MakeIdentity4x4();
     wvpData->World = MakeIdentity4x4();
+    wvpData->WorldInverseTranspose = MakeIdentity4x4();
 
     // Transform変数を作る
     Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
@@ -1321,6 +1351,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             //ImGui::DragFloat("rotate.y", &transform.translate.z, 0.1f);
             ImGui::Checkbox("useMonsterBall", &useMonsterBall);
             ImGui::DragFloat3("light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
+            ImGui::DragFloat3("scale", &transform.scale.x,  0.01f, 0.1f, 5.0f);
             ImGui::End();
 
             // 方向は正規化
@@ -1338,6 +1369,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
             wvpData->WVP = worldViewProjectionMatrix;
             wvpData->World = worldMatrix;
+            wvpData->WorldInverseTranspose = Transpose(Inverse(worldMatrix));
 
             // Sprite用のWorldViewProjectionMatrixを作る
             Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
