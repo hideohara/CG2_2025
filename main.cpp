@@ -103,6 +103,12 @@ struct ModelData {
     MaterialData material;
 };
 
+struct PointLight {
+    Vector4 color; //!< ライトの色
+    Vector3 position;    //!< ライトの位置
+    float intensity; //!< 輝度
+};
+
 // ----------------------------------------
 
 // 単位行列
@@ -1024,7 +1030,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
     // RootParameter作成。複数設定できるので配列。今回は結果1つだけなので長さ1の配列
-    D3D12_ROOT_PARAMETER rootParameters[5] = {};
+    D3D12_ROOT_PARAMETER rootParameters[6] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShaderで使う
     rootParameters[0].Descriptor.ShaderRegister = 0;    // レジスタ番号0とバインド
@@ -1045,6 +1051,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShdaderで使う
     rootParameters[4].Descriptor.ShaderRegister = 2;    // レジスタ番号２を使う
+
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[5].Descriptor.ShaderRegister = 3;
 
     descriptionRootSignature.pParameters = rootParameters;  // ルートパラメータ配列へのポインタ
     descriptionRootSignature.NumParameters = _countof(rootParameters);  // 配列の長さ
@@ -1478,7 +1488,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     directionalLightResource->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
 
     // デフォルト値はとりあえず以下のようにしておく
-    directionalLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    directionalLightData->color = { 0.1f, 0.1f, 0.1f, 1.0f };
     directionalLightData->direction = { 0.0f, -1.0f, 0.0f };
     directionalLightData->intensity = 1.0f;
 
@@ -1494,6 +1504,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     //cameraData->worldPosition = { 0.0f, 1.0f, -20.0f };
     cameraData->worldPosition = cameraTransform.translate;
 
+    // --------------------------------------
+
+    // PointLight用のリソースを作る
+    ID3D12Resource* pointLightResource = CreateBufferResource(device, sizeof(PointLight));
+    // データを書き込む
+    PointLight* pointLightData = nullptr;
+    // 書き込むためのアドレスを取得
+    pointLightResource->Map(0, nullptr, reinterpret_cast<void**>(&pointLightData));
+    // デフォルト値を書き込んでおく
+    pointLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    pointLightData->position = { -2.0f, 1.0f,-2.0f };
+    pointLightData->intensity = 1.0f;
 
     // -----------------------------------------------------
 
@@ -1521,13 +1543,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             ImGui::ColorEdit4("material", &materialData->color.x, ImGuiColorEditFlags_AlphaPreview);
             ImGui::DragFloat("rotate.y", &modelTransform.rotate.y, 0.1f);
             ImGui::Checkbox("useMonsterBall", &useMonsterBall);
-            ImGui::DragFloat3("light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
+            ImGui::DragFloat3("directional Light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
             ImGui::DragFloat3("scale", &transform.scale.x,  0.01f, 0.1f, 5.0f);
+            ImGui::DragFloat3("point Light", &pointLightData->position.x, 0.01f);
             ImGui::End();
 
             // 方向は正規化
             directionalLightData->direction = Normalize(directionalLightData->direction);
-
 
             //transform.rotate.y += 0.03f;
            // Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
@@ -1629,6 +1651,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
             // cameraのCBufferの場所を設定
             commandList->SetGraphicsRootConstantBufferView(4, cameraResource->GetGPUVirtualAddress());
+            // PointLightのCBufferの場所を設定
+            commandList->SetGraphicsRootConstantBufferView(5, pointLightResource->GetGPUVirtualAddress());
 
             // 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
             //commandList->DrawInstanced(6, 1, 0, 0);
@@ -1720,6 +1744,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
+    pointLightResource->Release();
 
     cameraResource->Release();
 
