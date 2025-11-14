@@ -109,6 +109,18 @@ struct PointLight {
     float intensity; //!< 輝度
 };
 
+struct SpotLight {
+    Vector4 color; //!< ライトの色
+    Vector3 position;    //!< ライトの位置
+    float intensity; //!< 輝度
+    Vector3 direction; //!< スポットライトの方向
+    float distance; //!< ライトの届く最大距離
+    float decay;   //!< 減衰率
+    float cosAngle; //!< スポットライトの余弦
+    //float padding[2];
+    float falloffStart;
+};
+
 // ----------------------------------------
 
 // 単位行列
@@ -1030,7 +1042,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
     // RootParameter作成。複数設定できるので配列。今回は結果1つだけなので長さ1の配列
-    D3D12_ROOT_PARAMETER rootParameters[6] = {};
+    D3D12_ROOT_PARAMETER rootParameters[7] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShaderで使う
     rootParameters[0].Descriptor.ShaderRegister = 0;    // レジスタ番号0とバインド
@@ -1055,6 +1067,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[5].Descriptor.ShaderRegister = 3;
+
+    rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[6].Descriptor.ShaderRegister = 4;
 
     descriptionRootSignature.pParameters = rootParameters;  // ルートパラメータ配列へのポインタ
     descriptionRootSignature.NumParameters = _countof(rootParameters);  // 配列の長さ
@@ -1514,8 +1530,42 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     pointLightResource->Map(0, nullptr, reinterpret_cast<void**>(&pointLightData));
     // デフォルト値を書き込んでおく
     pointLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
-    pointLightData->position = { -2.0f, 1.0f,-2.0f };
+    pointLightData->position = { -5.0f, 1.0f,-2.0f };
     pointLightData->intensity = 1.0f;
+
+    // --------------------------------------
+
+// SpotLight用のリソースを作る
+    ID3D12Resource* spotLightResource = CreateBufferResource(device, sizeof(SpotLight));
+    // データを書き込む
+    SpotLight* spotLightData = nullptr;
+    // 書き込むためのアドレスを取得
+    spotLightResource->Map(0, nullptr, reinterpret_cast<void**>(&spotLightData));
+    // デフォルト値を書き込んでおく
+    spotLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    spotLightData->position = { 1.0f, 4.0f, -4.0f };
+    spotLightData->intensity = 4.0f;
+    spotLightData->distance = 7.0f;
+    spotLightData->direction = Normalize({ -0.0f, -1.0f, 5.0f });
+    spotLightData->decay = 2.0f;
+    spotLightData->cosAngle = std::cos(std::numbers::pi_v<float> / 6.0f);
+    spotLightData->falloffStart = std::cos(std::numbers::pi_v<float> / 8.0f);
+    // ---------------------
+
+
+    // ２個目のWVP用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
+    ID3D12Resource* wvpResource2 = CreateBufferResource(device, sizeof(TransformationMatrix));
+    // データを書き込む
+    TransformationMatrix* wvpData2 = nullptr;
+    // 書き込むためのアドレスを取得
+    wvpResource2->Map(0, nullptr, reinterpret_cast<void**>(&wvpData2));
+    // 単位行列を書きこんでおく
+    wvpData2->WVP = MakeIdentity4x4();
+    wvpData2->World = MakeIdentity4x4();
+    wvpData2->WorldInverseTranspose = MakeIdentity4x4();
+
+    Transform transform2{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} };
+
 
     // -----------------------------------------------------
 
@@ -1546,10 +1596,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             ImGui::DragFloat3("directional Light", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f);
             ImGui::DragFloat3("scale", &transform.scale.x,  0.01f, 0.1f, 5.0f);
             ImGui::DragFloat3("point Light", &pointLightData->position.x, 0.01f);
+            ImGui::DragFloat3("Spot light Position", &spotLightData->position.x, 0.1f, -10.0f, 10.0f);
+            ImGui::DragFloat3("Spot light Dir", &spotLightData->direction.x, 0.1f, -100.0f, 100.0f);
+            ImGui::DragFloat("Spot light angle", &spotLightData->cosAngle, 0.01f, 0.0f, 100.0f);
             ImGui::End();
 
             // 方向は正規化
             directionalLightData->direction = Normalize(directionalLightData->direction);
+            spotLightData->direction = Normalize(spotLightData->direction);
+            spotLightData->falloffStart = spotLightData->cosAngle * 8.0f / 6.0f;
 
             //transform.rotate.y += 0.03f;
            // Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
@@ -1653,6 +1708,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             commandList->SetGraphicsRootConstantBufferView(4, cameraResource->GetGPUVirtualAddress());
             // PointLightのCBufferの場所を設定
             commandList->SetGraphicsRootConstantBufferView(5, pointLightResource->GetGPUVirtualAddress());
+            // SpotLightを設定
+            commandList->SetGraphicsRootConstantBufferView(6, spotLightResource->GetGPUVirtualAddress());
 
             // 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
             //commandList->DrawInstanced(6, 1, 0, 0);
@@ -1744,6 +1801,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
+    spotLightResource->Release();
+    wvpResource2->Release();
 
     pointLightResource->Release();
 
